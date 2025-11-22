@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Addition Learning Model</title>
+    <style>
+        :root {
+            --primary: #3b82f6;
+            --primary-dark: #2563eb;
+            --success: #22c55e;
+            --bg: #0f172a;
+            --card-bg: #1e293b;
+            --text: #f1f5f9;
+            --text-muted: #94a3b8;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            margin: 0;
+            font-weight: 300;
+            letter-spacing: 1px;
+        }
+
+        .subtitle {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            margin-top: 8px;
+        }
+
+        .main-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            max-width: 1000px;
+            width: 100%;
+            justify-content: center;
+        }
+
+        .panel {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            flex: 1;
+            min-width: 320px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Controls Section */
+        .control-group {
+            margin-bottom: 24px;
+        }
+
+        label {
+            display: block;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .input-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: rgba(0,0,0,0.2);
+            padding: 12px;
+            border-radius: 8px;
+        }
+
+        input[type="number"] {
+            background: transparent;
+            border: 1px solid #475569;
+            color: white;
+            padding: 8px;
+            border-radius: 4px;
+            width: 60px;
+            text-align: center;
+            font-size: 1.1rem;
+        }
+
+        .operator {
+            color: var(--text-muted);
+            font-weight: bold;
+        }
+
+        .prediction-box {
+            margin-top: auto;
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            border-radius: 8px;
+            padding: 16px;
+            text-align: center;
+        }
+
+        .pred-label {
+            color: var(--primary);
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+
+        .pred-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            font-family: monospace;
+        }
+
+        .error-display {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        /* Training Section */
+        .training-controls {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #334155;
+        }
+
+        button {
+            width: 100%;
+            padding: 14px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+        }
+
+        button:hover {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+        }
+
+        button:disabled {
+            background: #475569;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Visualization Canvas */
+        .canvas-container {
+            position: relative;
+            background: #000;
+            border-radius: 12px;
+            overflow: hidden;
+            min-height: 300px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        canvas {
+            width: 100%;
+            height: 100%;
+        }
+
+        .overlay-stats {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            font-family: monospace;
+            font-size: 12px;
+            color: var(--success);
+            background: rgba(0,0,0,0.7);
+            padding: 8px;
+            border-radius: 4px;
+            pointer-events: none;
+        }
+
+        .weight-tag {
+            position: absolute;
+            background: white;
+            color: black;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-family: monospace;
+            font-weight: bold;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>Neural Network Adder</h1>
+        <div class="subtitle">Single Neuron Perceptron Visualization</div>
+    </div>
+
+    <div class="main-container">
+        <!-- Left Panel: User Interface -->
+        <div class="panel">
+            <div class="control-group">
+                <label>Test Inputs</label>
+                <div class="input-row">
+                    <input type="number" id="inputA" value="20" min="0" max="100" oninput="updatePrediction()">
+                    <span class="operator">+</span>
+                    <input type="number" id="inputB" value="30" min="0" max="100" oninput="updatePrediction()">
+                    <span class="operator">=</span>
+                    <span class="operator">?</span>
+                </div>
+            </div>
+
+            <div class="prediction-box">
+                <div class="pred-label">AI Prediction</div>
+                <div class="pred-value" id="outputVal">0.00</div>
+                <div class="error-display" id="errorVal">Error: -</div>
+            </div>
+
+            <div class="training-controls">
+                <label>Training</label>
+                <p style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 15px;">
+                    Click Train to run <strong>until convergence</strong>. The model will train continuously until it discovers the exact formula (Weights ˜ 1.0).
+                </p>
+                <div style="display: flex; gap: 10px;">
+                    <button id="trainBtn" onclick="runTraining()" style="flex: 2;">
+                        <span id="btnIcon">?</span>
+                        <span id="btnText">Train Model</span>
+                    </button>
+                    <button onclick="resetModel()" style="flex: 1; background: #334155;">
+                        ? Reset
+                    </button>
+                </div>
+                <div style="margin-top: 10px; font-size: 0.8rem; color: var(--text-muted); text-align: center;" id="epochDisplay">
+                    Epochs: 0
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Panel: Visualization -->
+        <div class="panel" style="flex: 1.5;">
+            <label>Network Visualization</label>
+            <div class="canvas-container" id="canvasWrapper">
+                <canvas id="netCanvas"></canvas>
+                <div class="overlay-stats" id="weightStats">
+                    w1: 0.000<br>
+                    w2: 0.000<br>
+                    bias: 0.000
+                </div>
+            </div>
+        </div>
+    </div>
+
+<script>
+    // --- AI MODEL CONFIGURATION ---
+    const state = {
+        w1: Math.random() * 2 - 1, // Random weight between -1 and 1
+        w2: Math.random() * 2 - 1,
+        bias: Math.random() * 2 - 1,
+        epochs: 0,
+        isTraining: false,
+        learningRate: 0.0001 // Small step size for stability
+    };
+
+    // --- DOM ELEMENTS ---
+    const els = {
+        inputA: document.getElementById('inputA'),
+        inputB: document.getElementById('inputB'),
+        output: document.getElementById('outputVal'),
+        error: document.getElementById('errorVal'),
+        stats: document.getElementById('weightStats'),
+        epoch: document.getElementById('epochDisplay'),
+        canvas: document.getElementById('netCanvas'),
+        wrapper: document.getElementById('canvasWrapper'),
+        btn: document.getElementById('trainBtn'),
+        btnText: document.getElementById('btnText')
+    };
+
+    const ctx = els.canvas.getContext('2d');
+
+    // --- CORE AI FUNCTIONS ---
+
+    function predict(a, b) {
+        // The core neuron formula: (Input1 * Weight1) + (Input2 * Weight2) + Bias
+        return (a * state.w1) + (b * state.w2) + state.bias;
+    }
+
+    function trainStep() {
+        // 1. Generate random training data (0-100)
+        const a = Math.floor(Math.random() * 100);
+        const b = Math.floor(Math.random() * 100);
+        const trueAnswer = a + b;
+
+        // 2. Make a guess
+        const guess = predict(a, b);
+
+        // 3. Calculate Error
+        const error = guess - trueAnswer;
+
+        // 4. Update Weights (Gradient Descent)
+        // We nudge the weights in the opposite direction of the error
+        state.w1 -= error * a * state.learningRate;
+        state.w2 -= error * b * state.learningRate;
+        state.bias -= error * state.learningRate;
+    }
+
+    // --- TRAINING LOOP ---
+
+    function runTraining() {
+        if (state.isTraining) return;
+        
+        state.isTraining = true;
+        els.btn.disabled = true;
+        els.btnText.innerText = "Optimizing...";
+        
+        // Safety limit to prevent infinite loops if something goes wrong
+        const maxEpochs = 500000; 
+
+        const interval = setInterval(() => {
+            // Speed up: Run 500 steps per frame (much faster)
+            for(let i=0; i<500; i++) {
+                trainStep();
+            }
+            state.epochs += 500;
+            
+            // Update UI periodically
+            updatePrediction();
+            drawViz();
+            els.epoch.innerText = `Epochs: ${state.epochs}`;
+
+            // CONVERGENCE CHECK:
+            // Instead of a fixed number, we check if the weights are "close enough" to perfect.
+            // We want Weights to be 1.0 and Bias to be 0.0 (+/- 0.005)
+            const isConverged = 
+                Math.abs(state.w1 - 1.0) < 0.005 &&
+                Math.abs(state.w2 - 1.0) < 0.005 &&
+                Math.abs(state.bias - 0.0) < 0.005;
+
+            if (isConverged || state.epochs >= maxEpochs) {
+                clearInterval(interval);
+                state.isTraining = false;
+                els.btn.disabled = false;
+                els.btnText.innerText = isConverged ? "Converged!" : "Stopped (Limit)";
+            }
+        }, 16);
+    }
+    
+    function resetModel() {
+        if (state.isTraining) return;
+        state.w1 = Math.random() * 2 - 1;
+        state.w2 = Math.random() * 2 - 1;
+        state.bias = Math.random() * 2 - 1;
+        state.epochs = 0;
+        els.epoch.innerText = "Epochs: 0";
+        updatePrediction();
+        drawViz();
+    }
+
+    // --- VISUALIZATION & UI ---
+
+    function resizeCanvas() {
+        els.canvas.width = els.wrapper.clientWidth;
+        els.canvas.height = els.wrapper.clientHeight;
+        drawViz();
+    }
+    window.addEventListener('resize', resizeCanvas);
+
+    function updatePrediction() {
+        const a = parseFloat(els.inputA.value) || 0;
+        const b = parseFloat(els.inputB.value) || 0;
+        const pred = predict(a, b);
+        const actual = a + b;
+        
+        els.output.innerText = pred.toFixed(2);
+        els.error.innerText = `Actual: ${actual} | Diff: ${(pred - actual).toFixed(2)}`;
+        
+        els.stats.innerHTML = `
+            <span style="color:#94a3b8">INTERNAL WEIGHTS</span><br>
+            w1 (Input A): <span style="color:${getColor(state.w1)}">${state.w1.toFixed(4)}</span><br>
+            w2 (Input B): <span style="color:${getColor(state.w2)}">${state.w2.toFixed(4)}</span><br>
+            bias: <span style="color:${getColor(state.bias)}">${state.bias.toFixed(4)}</span>
+        `;
+    }
+
+    function getColor(val) {
+        // Green for positive, Red for negative
+        return val >= 0 ? '#4ade80' : '#f87171';
+    }
+
+    function drawViz() {
+        const w = els.canvas.width;
+        const h = els.canvas.height;
+        
+        ctx.clearRect(0, 0, w, h);
+
+        // Positions
+        const startX = w * 0.2;
+        const endX = w * 0.8;
+        const nodeRadius = 25;
+        
+        const yA = h * 0.3;
+        const yB = h * 0.7;
+        const yOut = h * 0.5;
+
+        // Draw Connections
+        drawConnection(startX, yA, endX, yOut, state.w1);
+        drawConnection(startX, yB, endX, yOut, state.w2);
+
+        // Draw Nodes
+        drawNode(startX, yA, "A", els.inputA.value);
+        drawNode(startX, yB, "B", els.inputB.value);
+        
+        // Output Node
+        const pred = predict(parseFloat(els.inputA.value), parseFloat(els.inputB.value));
+        drawNode(endX, yOut, "SUM", Math.round(pred));
+    }
+
+    function drawConnection(x1, y1, x2, y2, weight) {
+        ctx.beginPath();
+        ctx.moveTo(x1 + 20, y1); // Offset for node radius
+        
+        // Bezier curve for smooth line
+        const cp1x = x1 + (x2 - x1) / 2;
+        const cp1y = y1;
+        const cp2x = x2 - (x2 - x1) / 2;
+        const cp2y = y2;
+        
+        ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, x2 - 20, y2);
+        
+        // Style based on weight
+        const thickness = Math.max(1, Math.abs(weight) * 4);
+        const alpha = Math.min(1, Math.abs(weight) + 0.2);
+        const color = weight >= 0 ? `rgba(74, 222, 128, ${alpha})` : `rgba(248, 113, 113, ${alpha})`;
+        
+        ctx.lineWidth = thickness;
+        ctx.strokeStyle = color;
+        ctx.stroke();
+
+        // Draw weight label on line
+        const midX = (x1 + x2) / 2;
+        const midY = (y1 + y2) / 2;
+        ctx.fillStyle = 'white';
+        ctx.font = '10px monospace';
+        // Simple offset logic to keep text off the center crossing
+        const textOffY = y1 < y2 ? -10 : 10; 
+        // ctx.fillText(weight.toFixed(2), midX, midY + textOffY);
+    }
+
+    function drawNode(x, y, label, value) {
+        // Shadow
+        ctx.shadowColor = 'rgba(59, 130, 246, 0.5)';
+        ctx.shadowBlur = 15;
+
+        // Circle
+        ctx.beginPath();
+        ctx.arc(x, y, 25, 0, Math.PI * 2);
+        ctx.fillStyle = '#1e293b';
+        ctx.fill();
+        ctx.strokeStyle = '#3b82f6';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        ctx.shadowBlur = 0; // Reset shadow
+
+        // Label
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = '10px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(label, x, y - 8);
+
+        // Value
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 14px monospace';
+        ctx.fillText(value, x, y + 5);
+    }
+
+    // Initialize
+    resizeCanvas();
+    updatePrediction();
+
+</script>
+</body>
+</html>
